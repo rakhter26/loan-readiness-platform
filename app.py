@@ -2,6 +2,7 @@ import streamlit as st
 import time
 import pandas as pd
 from datetime import datetime
+from feedback_form import render_feedback_button
 
 st.set_page_config(
     page_title="Loan Readiness Platform",
@@ -187,6 +188,8 @@ if st.session_state.step == 1:
             st.session_state.step = 2
             st.rerun()
 
+    render_feedback_button(1)
+
 # ══════════════════════════════════════════════════════════════════════════════
 # STEP 2 — Financial Data
 # ══════════════════════════════════════════════════════════════════════════════
@@ -258,6 +261,8 @@ elif st.session_state.step == 2:
             st.session_state.step = 3
             st.rerun()
 
+    render_feedback_button(2)
+
 # ══════════════════════════════════════════════════════════════════════════════
 # STEP 3 — AI Analysis
 # ══════════════════════════════════════════════════════════════════════════════
@@ -328,6 +333,8 @@ elif st.session_state.step == 3:
             if st.button("View My Loan Readiness Score →", type="primary", use_container_width=True):
                 st.session_state.step = 4
                 st.rerun()
+
+        render_feedback_button(3)
 
 # ══════════════════════════════════════════════════════════════════════════════
 # STEP 4 — Loan Readiness Score
@@ -420,6 +427,8 @@ elif st.session_state.step == 4:
         if st.button("Generate My Credit Pack →", type="primary", use_container_width=True):
             st.session_state.step = 5
             st.rerun()
+
+    render_feedback_button(4)
 
 # ══════════════════════════════════════════════════════════════════════════════
 # STEP 5 — Credit Pack
@@ -576,6 +585,8 @@ elif st.session_state.step == 5:
                           "score_data","processing_done","submitted"]:
                     st.session_state.pop(k, None)
                 st.rerun()
+
+        render_feedback_button(5)
 
     else:
         st.balloons()
