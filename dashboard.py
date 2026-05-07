@@ -1,3 +1,6 @@
+from dotenv import load_dotenv
+load_dotenv()  # reads .env file when running locally
+
 import streamlit as st
 import pandas as pd
 from db import init_db, get_all_feedback, get_step_stats
