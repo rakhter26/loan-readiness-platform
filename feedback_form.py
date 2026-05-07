@@ -20,8 +20,10 @@ def _send_email(step_name, overall, ease, usefulness, awareness, comments, busin
     gmail_pass = os.environ.get("GMAIL_APP_PASSWORD", "").replace(" ", "")
     to_email   = os.environ.get("FEEDBACK_EMAIL", gmail_user).strip()
 
-    if not gmail_user or not gmail_pass:
-        return False, "GMAIL_USER or GMAIL_APP_PASSWORD environment variable is not set."
+    if not gmail_user:
+        return False, "GMAIL_USER is not set in environment variables."
+    if not gmail_pass:
+        return False, "GMAIL_APP_PASSWORD is not set in environment variables."
 
     html = f"""
     <html><body style="font-family:Arial,sans-serif;color:#333;">
@@ -60,7 +62,7 @@ def _send_email(step_name, overall, ease, usefulness, awareness, comments, busin
     msg["To"]      = to_email
     msg.attach(MIMEText(html, "html"))
 
-    # Try port 465 (SSL) first, fall back to port 587 (STARTTLS)
+    # Try port 465 (SSL) first, fall back to 587 (STARTTLS)
     try:
         with smtplib.SMTP_SSL("smtp.gmail.com", 465) as smtp:
             smtp.login(gmail_user, gmail_pass)
@@ -75,14 +77,20 @@ def _send_email(step_name, overall, ease, usefulness, awareness, comments, busin
                 smtp.sendmail(gmail_user, to_email, msg.as_string())
             return True, None
         except Exception as e2:
-            return False, f"Port 465 error: {e1} | Port 587 error: {e2}"
+            return False, f"465: {e1} | 587: {e2}"
 
 
 def render_feedback_button(step_number: int):
     submitted_key = f"fb_submitted_{step_number}"
+    error_key     = f"fb_error_{step_number}"
+
     if st.session_state.get(submitted_key):
         st.success("✅ Thank you for your feedback!")
         return
+
+    # Show error OUTSIDE the expander so it stays visible after rerun
+    if st.session_state.get(error_key):
+        st.error(st.session_state[error_key])
 
     st.markdown("<br>", unsafe_allow_html=True)
     with st.expander("💬 Share feedback on this step"):
@@ -121,7 +129,8 @@ def render_feedback_button(step_number: int):
             ok, err   = _send_email(step_name, overall, ease, usefulness,
                                     awareness, comments, biz.get("business_name"))
             if ok:
+                st.session_state.pop(error_key, None)
                 st.session_state[submitted_key] = True
-                st.rerun()
             else:
-                st.error(f"Could not send feedback email: {err}")
+                st.session_state[error_key] = f"Email failed: {err}"
+            st.rerun()
