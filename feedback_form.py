@@ -1,8 +1,6 @@
 import os
-import smtplib
+import resend
 import streamlit as st
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
 
 STEP_NAMES = {
     1: "Business Profile",
@@ -16,14 +14,15 @@ STAR_MAP = {1: "★☆☆☆☆", 2: "★★☆☆☆", 3: "★★★☆☆", 4:
 
 
 def _send_email(step_name, overall, ease, usefulness, awareness, comments, business_name):
-    gmail_user = os.environ.get("GMAIL_USER", "").strip()
-    gmail_pass = os.environ.get("GMAIL_APP_PASSWORD", "").replace(" ", "")
-    to_email   = os.environ.get("FEEDBACK_EMAIL", gmail_user).strip()
+    api_key  = os.environ.get("RESEND_API_KEY", "").strip()
+    to_email = os.environ.get("FEEDBACK_EMAIL", "").strip()
 
-    if not gmail_user:
-        return False, "GMAIL_USER is not set in environment variables."
-    if not gmail_pass:
-        return False, "GMAIL_APP_PASSWORD is not set in environment variables."
+    if not api_key:
+        return False, "RESEND_API_KEY is not set in environment variables."
+    if not to_email:
+        return False, "FEEDBACK_EMAIL is not set in environment variables."
+
+    resend.api_key = api_key
 
     html = f"""
     <html><body style="font-family:Arial,sans-serif;color:#333;">
@@ -56,28 +55,16 @@ def _send_email(step_name, overall, ease, usefulness, awareness, comments, busin
     </body></html>
     """
 
-    msg = MIMEMultipart("alternative")
-    msg["Subject"] = f"[LRP Feedback] {step_name} — {business_name or 'Anonymous'}"
-    msg["From"]    = gmail_user
-    msg["To"]      = to_email
-    msg.attach(MIMEText(html, "html"))
-
-    # Try port 465 (SSL) first, fall back to 587 (STARTTLS)
     try:
-        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as smtp:
-            smtp.login(gmail_user, gmail_pass)
-            smtp.sendmail(gmail_user, to_email, msg.as_string())
+        resend.Emails.send({
+            "from":    "LRP Feedback <onboarding@resend.dev>",
+            "to":      [to_email],
+            "subject": f"[LRP Feedback] {step_name} — {business_name or 'Anonymous'}",
+            "html":    html,
+        })
         return True, None
-    except Exception as e1:
-        try:
-            with smtplib.SMTP("smtp.gmail.com", 587) as smtp:
-                smtp.ehlo()
-                smtp.starttls()
-                smtp.login(gmail_user, gmail_pass)
-                smtp.sendmail(gmail_user, to_email, msg.as_string())
-            return True, None
-        except Exception as e2:
-            return False, f"465: {e1} | 587: {e2}"
+    except Exception as e:
+        return False, str(e)
 
 
 def render_feedback_button(step_number: int):
@@ -88,7 +75,7 @@ def render_feedback_button(step_number: int):
         st.success("✅ Thank you for your feedback!")
         return
 
-    # Show error OUTSIDE the expander so it stays visible after rerun
+    # Show error outside the expander so it stays visible after rerun
     if st.session_state.get(error_key):
         st.error(st.session_state[error_key])
 
