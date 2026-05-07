@@ -3,7 +3,6 @@ import smtplib
 import streamlit as st
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-from db import init_db, save_feedback
 
 STEP_NAMES = {
     1: "Business Profile",
@@ -66,13 +65,10 @@ def _send_email(step_name, overall, ease, usefulness, awareness, comments, busin
             smtp.login(gmail_user, gmail_pass)
             smtp.sendmail(gmail_user, to_email, msg.as_string())
     except Exception as e:
-        print(f"Email send error: {e}")
+        print(f"Email error: {e}")
 
 
 def render_feedback_button(step_number: int):
-    """Call at the bottom of each step to render the collapsible feedback form."""
-    init_db()
-
     submitted_key = f"fb_submitted_{step_number}"
     if st.session_state.get(submitted_key):
         st.success("✅ Thank you for your feedback!")
@@ -110,23 +106,9 @@ def render_feedback_button(step_number: int):
         )
 
         if st.button("Submit Feedback", key=f"fb_submit_{step_number}", type="primary"):
-            biz         = st.session_state.get("business_data", {})
-            step_name   = STEP_NAMES.get(step_number, f"Step {step_number}")
-            biz_name    = biz.get("business_name")
-            district    = biz.get("district")
-
-            save_feedback(
-                step_number=step_number,
-                step_name=step_name,
-                overall_rating=overall,
-                ease_rating=ease,
-                usefulness_rating=usefulness,
-                loan_awareness=awareness,
-                comments=comments,
-                business_name=biz_name,
-                district=district,
-            )
-            _send_email(step_name, overall, ease, usefulness, awareness, comments, biz_name)
-
+            biz       = st.session_state.get("business_data", {})
+            step_name = STEP_NAMES.get(step_number, f"Step {step_number}")
+            _send_email(step_name, overall, ease, usefulness, awareness,
+                        comments, biz.get("business_name"))
             st.session_state[submitted_key] = True
             st.rerun()
